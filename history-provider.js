@@ -157,6 +157,8 @@ var __generator =
       this.requester = requester;
       this.tvToBackend = tvToBackend;
       this.backendToTv = backendToTv;
+      this.barCache = new Map();
+      this.barCacheTTL = 30000;
     }
     HistoryProvider.prototype.getBars = function (
       symbolInfo,
@@ -164,6 +166,7 @@ var __generator =
       from,
       to,
       firstDataRequest,
+      countBack,
     ) {
       return __awaiter(this, void 0, void 0, function () {
         var backendResolution,
@@ -194,11 +197,20 @@ var __generator =
               validTo = isNaN(toNum) ? Math.floor(Date.now() / 1000) : toNum;
 
               params = {
-                symbol: symbolInfo.name || symbolInfo.ticker || symbolInfo.name,
+                symbol: symbolInfo.ticker || symbolInfo.name,
                 resolution: backendResolution,
                 from: validFrom,
                 to: validTo,
               };
+              if (countBack) params.countback = countBack;
+
+              // Check cache before making a request
+              var cacheKey = "".concat(params.symbol, "_").concat(params.resolution, "_").concat(params.from, "_").concat(params.to);
+              var cached = this.barCache.get(cacheKey);
+              if (cached && Date.now() - cached.timestamp < this.barCacheTTL) {
+                return [2 /*return*/, cached.data];
+              }
+
               return [
                 4 /*yield*/,
                 this.requester.sendRequest(
@@ -216,21 +228,20 @@ var __generator =
                 !response.t ||
                 response.t.length === 0
               ) {
-                return [
-                  2 /*return*/,
-                  {
-                    bars: [],
-                    noData: true,
-                    nextTime: response.nextTime
-                      ? response.nextTime * 1000
-                      : undefined,
-                  },
-                ];
+                var noDataResult = {
+                  bars: [],
+                  noData: true,
+                  nextTime: response.nextTime
+                    ? response.nextTime * 1000
+                    : undefined,
+                };
+                this.barCache.set(cacheKey, { data: noDataResult, timestamp: Date.now() });
+                return [2 /*return*/, noDataResult];
               }
               bars = [];
               for (i = 0; i < response.t.length; i++) {
                 bars.push({
-                  time: response.t[i],
+                  time: response.t[i] * 1000,
                   open: response.o[i],
                   high: response.h[i],
                   low: response.l[i],
@@ -240,6 +251,12 @@ var __generator =
                       ? void 0
                       : _a[i],
                 });
+              }
+              this.barCache.set(cacheKey, { data: { bars: bars }, timestamp: Date.now() });
+              // Evict old entries if cache grows too large
+              if (this.barCache.size > 50) {
+                var oldestKey = this.barCache.keys().next().value;
+                this.barCache.delete(oldestKey);
               }
               return [2 /*return*/, { bars: bars }];
             case 2:

@@ -44,9 +44,12 @@
         ["480", "8h"],
         ["720", "12h"],
         ["1D", "1d"],
+        ["D", "1d"],
         ["3D", "3d"],
         ["1W", "1w"],
+        ["W", "1w"],
         ["1M", "1M"],
+        ["M", "1M"],
       ]);
       this.backendToTv = new Map([
         ["1m", "1"],
@@ -104,13 +107,7 @@
           return response.json();
         })
         .then(function (config) {
-          if (config.supported_resolutions) {
-            config.supported_resolutions = config.supported_resolutions
-              .map(function (res) {
-                return _this.backendToTv.get(res) || res;
-              })
-              .filter(Boolean);
-          }
+          // Server already returns resolutions in TV format — no mapping needed
           callback(config);
         })
         .catch(function (error) {
@@ -177,6 +174,32 @@
           onResult([]);
         });
     };
+    Datafeed.prototype.searchSymbolsPaginated = function (
+      options,
+      onResult,
+    ) {
+      console.log('\uD83D\uDD0D Paginated search: "'.concat(options.userInput, '" start=').concat(options.start));
+      var url = new URL("".concat(this.udfUrl, "/search"));
+      url.searchParams.append("query", options.userInput);
+      if (options.exchange) url.searchParams.append("exchange", options.exchange);
+      if (options.symbolType) url.searchParams.append("type", options.symbolType);
+      url.searchParams.append("limit", "50");
+      if (options.start) url.searchParams.append("start", String(options.start));
+      fetch(url.toString())
+        .then(function (response) {
+          return response.json();
+        })
+        .then(function (result) {
+          var items = result || [];
+          // If fewer results returned than limit, no more pages
+          var symbolsRemaining = items.length >= 50 ? 50 : 0;
+          onResult(items, symbolsRemaining);
+        })
+        .catch(function (error) {
+          console.error("Paginated search failed:", error);
+          onResult([], 0);
+        });
+    };
     Datafeed.prototype.resolveSymbol = function (
       symbolName,
       onResolve,
@@ -190,11 +213,9 @@
           if (symbolInfo.supported_resolutions) {
             var seen = new Set();
             symbolInfo.supported_resolutions = symbolInfo.supported_resolutions
-              .map(function (res) {
-                return _this.backendToTv.get(res) || res;
-              })
+              // Server already returns TV-format resolutions — just deduplicate and validate
               .filter(function (res) {
-                if (!/^\d+(D|W|M|S|T)?$/.test(res)) return false;
+                if (!/^(\d+[DWMST]?|[DWM])$/.test(res)) return false;
                 if (seen.has(res)) return false;
                 seen.add(res);
                 return true;
@@ -212,6 +233,16 @@
         });
     };
 
+    Datafeed.prototype.getServerTime = function (callback) {
+      fetch("".concat(this.udfUrl, "/time"))
+        .then(function (response) { return response.text(); })
+        .then(function (time) { return callback(parseInt(time, 10)); })
+        .catch(function () {
+          console.error("[datafeed] Failed to fetch server time, using local time");
+          callback(Math.floor(Date.now() / 1000));
+        });
+    };
+
     Datafeed.prototype.getBars = function (
       symbolInfo,
       resolution,
@@ -222,6 +253,7 @@
       var from = periodParams.from;
       var to = periodParams.to;
       var firstDataRequest = periodParams.firstDataRequest;
+      var countBack = periodParams.countBack;
 
       console.log(
         "\uD83D\uDCCA Getting bars: "
@@ -232,7 +264,7 @@
       );
 
       this.historyProvider
-        .getBars(symbolInfo, resolution, from, to, firstDataRequest)
+        .getBars(symbolInfo, resolution, from, to, firstDataRequest, countBack)
         .then(function (result) {
           onResult(result.bars, {
             noData: result.noData,

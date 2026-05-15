@@ -21,6 +21,7 @@
       this.reconnectAttempts = 0;
       this.maxReconnectAttempts = 10;
       this.reconnectDelay = 1000;
+      this.heartbeatInterval = null;
       this.wsUrl = wsUrl;
       this.tvToBackend = tvToBackend;
       this.backendToTv = backendToTv;
@@ -36,6 +37,12 @@
           _this.reconnectAttempts = 0;
           _this.reconnectDelay = 1000;
           _this.resubscribeAll();
+          if (_this.heartbeatInterval) clearInterval(_this.heartbeatInterval);
+          _this.heartbeatInterval = setInterval(function () {
+            if (_this.ws && _this.ws.readyState === WebSocket.OPEN) {
+              _this.ws.send(JSON.stringify({ action: "ping" }));
+            }
+          }, 30000);
         };
         this.ws.onmessage = function (event) {
           try {
@@ -65,6 +72,10 @@
       var _this = this;
       if (this.reconnectAttempts >= this.maxReconnectAttempts) {
         console.error("[streaming] Max reconnection attempts reached");
+        if (this.heartbeatInterval) {
+          clearInterval(this.heartbeatInterval);
+          this.heartbeatInterval = null;
+        }
         return;
       }
       setTimeout(function () {
@@ -141,7 +152,7 @@
         var subscriber = this.subscribers.get(key);
         if (subscriber) {
           var bar_1 = {
-            time: Math.floor(message.data.time / 1000),
+            time: Math.floor(message.data.time),
             open: message.data.open,
             high: message.data.high,
             low: message.data.low,
@@ -187,6 +198,10 @@
       });
     };
     StreamingDatafeed.prototype.disconnect = function () {
+      if (this.heartbeatInterval) {
+        clearInterval(this.heartbeatInterval);
+        this.heartbeatInterval = null;
+      }
       if (this.ws) {
         this.ws.close();
         this.ws = null;

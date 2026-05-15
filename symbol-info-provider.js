@@ -223,6 +223,10 @@ var __generator =
               };
 
               this.cache.set(symbolName, symbolInfo);
+              if (this.cache.size > 100) {
+                var firstKey = this.cache.keys().next().value;
+                this.cache.delete(firstKey);
+              }
               return [2 /*return*/, symbolInfo];
             case 2:
               error_1 = _c.sent();

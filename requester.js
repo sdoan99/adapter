@@ -169,8 +169,12 @@ var __generator =
             if (this.pendingRequests.has(fullUrl_1)) {
               return [2 /*return*/, this.pendingRequests.get(fullUrl_1)];
             }
-            requestPromise = fetch(fullUrl_1)
+            var controller = new AbortController();
+            var timeoutId = setTimeout(function () { controller.abort(); }, 15000);
+
+            requestPromise = fetch(fullUrl_1, { signal: controller.signal })
               .then(function (response) {
+                clearTimeout(timeoutId);
                 _this.pendingRequests.delete(fullUrl_1);
                 if (!response.ok) {
                   throw new Error(
@@ -180,6 +184,7 @@ var __generator =
                 return response.json();
               })
               .catch(function (error) {
+                clearTimeout(timeoutId);
                 _this.pendingRequests.delete(fullUrl_1);
                 throw error;
               });
