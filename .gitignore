@@ -1,0 +1,13 @@
+.env
+.env.local
+schwab_token.json
+oath.txt
+oauth_creds.json
+*.pem
+*.log
+node_modules/
+venv/
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
