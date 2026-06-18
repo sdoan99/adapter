@@ -2,9 +2,9 @@
 title: Plan — Codebase Duplication Consolidation (Adapter)
 status: active
 created: 2026-06-01T01:05:00Z
-last_updated: 2026-06-15T21:16:00Z
-last_session: 2026-06-15T21:16:00Z
-plan_file: /home/ubuntu/adapter/plans/todo/2026-06-01-duplicate-code-consolidation-plan.md
+last_updated: 2026-06-18T21:56:00Z
+last_session: 2026-06-18T21:56:00Z
+plan_file: /home/ubuntu/adapter/plans/inprogress/2026-06-01-duplicate-code-consolidation-plan.md
 source_docs:
   - /home/ubuntu/Jobs/plans/todo/2026-06-01-duplicate-code-consolidation-plan.md
 ---
@@ -74,6 +74,20 @@ Status values: `untouched` / `modified` / `added` / `deleted` / `pending`
 ---
 
 ## Session Log
+
+### 2026-06-18T21:56:00Z — Session: plan alignment & movement to inprogress
+
+**Continuity from last session:**
+- Last state: active but not-started (all tasks `[ ] not started`).
+- Pickup point: Ready to begin work on individual tasks.
+- Re-read these files: `/home/ubuntu/adapter/plans/inprogress/2026-06-01-duplicate-code-consolidation-plan.md`
+
+**Work done:**
+1. Moved plan document from `plans/todo/` to `plans/inprogress/` to align folder structure with its `active` status.
+2. Updated metadata paths and session dates.
+
+**State changes:**
+- status: active
 
 ### 2026-06-15T21:16:00Z — Session: activated plan
 
